@@ -1,0 +1,199 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Leave Management System
+
+Parameters:
+  JwtSecret:
+    Type: String
+    Description: "Secret key for JWT signing"
+    NoEcho: true
+
+Globals:
+  Function:
+    Runtime: java21
+    MemorySize: 512
+    Timeout: 30
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref LeaveManagementTable
+        jwt_secret: !Ref JwtSecret
+        SOURCE_EMAIL: "darshanvs1206@gmail.com"
+
+Resources:
+  # 1. THE SINGLE TABLE
+  LeaveManagementTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: LeaveManagement
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
+  # 2. THE CUSTOM AUTHORIZER
+  AuthHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: auth.AuthHandler::handleRequest
+
+  # 3. PUBLIC API ENDPOINTS
+  SignupHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: controller.SignupHandler::handleRequest
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LeaveManagementTable
+      Events:
+        SignupApi:
+          Type: Api
+          Properties:
+            Path: /signup
+            Method: post
+            RestApiId: !Ref LeaveManagementApi
+            Auth:
+              Authorizer: NONE
+
+  LoginHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: controller.LoginHandler::handleRequest
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref LeaveManagementTable
+      Events:
+        LoginApi:
+          Type: Api
+          Properties:
+            Path: /login
+            Method: post
+            RestApiId: !Ref LeaveManagementApi
+            Auth:
+              Authorizer: NONE
+
+  # 4. PROTECTED API ENDPOINT
+  ApplyLeaveFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: leaveHandlers.ApplyLeaveHandler::handleRequest
+      Environment:
+        Variables:
+          STATE_MACHINE_ARN: !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:LeaveApprovalDarshan"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LeaveManagementTable
+        - Statement:
+            - Effect: Allow
+              Action: "states:StartExecution"
+              Resource: !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:LeaveApprovalDarshan"
+      Events:
+        ApplyApi:
+          Type: Api
+          Properties:
+            Path: /leave
+            Method: post
+            RestApiId: !Ref LeaveManagementApi
+
+  # 5. THE API DEFINITION
+  LeaveManagementApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        DefaultAuthorizer: MyLambdaAuthorizer
+        Authorizers:
+          MyLambdaAuthorizer:
+            FunctionArn: !GetAtt AuthHandlerFunction.Arn
+            Identity:
+              Header: Authorization
+
+  # 6. THE STEP FUNCTION
+  LeaveApprovalStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: LeaveApprovalDarshan
+      DefinitionUri: statemachine.asl.json
+      DefinitionSubstitutions:
+        SendApprovalArn: !GetAtt SendApprovalHandlerFunction.Arn
+        NotifyUserArn: !GetAtt NotifyUserFunction.Arn
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref SendApprovalHandlerFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref NotifyUserFunction
+
+  # 7. WORKFLOW LAMBDAS
+  SendApprovalHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: leaveHandlers.SendApprovalHandler::handleRequest
+      Environment:
+        Variables:
+          API_ID: !Ref LeaveManagementApi
+          SOURCE_EMAIL: "darshanvs1206@gmail.com"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref LeaveManagementTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "ses:SendEmail"
+                - "ses:SendTemplatedEmail"
+              Resource:
+                - !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/darshanvs1206@gmail.com"
+                - !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:template/LeaveApprovalRequest-Darshan"
+  ApproveLeaveFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: leaveHandlers.ApproveLeaveHandler::handleRequest
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LeaveManagementTable
+        - Statement:
+            - Effect: Allow
+              Action: "states:SendTaskSuccess"
+              Resource: !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:LeaveApprovalDarshan"
+      Events:
+        ApproveApi:
+          Type: Api
+          Properties:
+            Path: /approve
+            Method: get
+            RestApiId: !Ref LeaveManagementApi
+            Auth:
+              Authorizer: NONE
+
+  NotifyUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: leaveHandlers.NotifyUserHandler::handleRequest
+      Environment:
+        Variables:
+          SOURCE_EMAIL: "darshanvs1206@gmail.com"
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - "ses:SendEmail"
+                - "ses:SendTemplatedEmail"
+              Resource:
+                - !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/darshanvs1206@gmail.com"
+                - !Sub "arn:aws:ses:${AWS::Region}:${AWS::AccountId}:template/*"
+Outputs:
+  ApiEndpoint:
+    Description: "Base URL of the API"
+    Value: !Sub "https://${LeaveManagementApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"

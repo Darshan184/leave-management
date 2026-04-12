@@ -1,0 +1,7 @@
+{
+  "TemplateName": "LeaveStatusNotification-Darshan",
+  "TemplateContent": {
+    "Subject": "Update on your Leave Request: {{status}}",
+    "Html": "<h1>Hello,</h1><p>Your leave request for <b>{{reason}}</b> has been <b>{{status}}</b>.</p><p>Thank you!</p>"
+  }
+}

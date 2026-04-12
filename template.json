@@ -1,0 +1,8 @@
+{
+  "Template": {
+  "TemplateName": "LeaveApprovalRequest-Darshan",
+  "SubjectPart": "Action Required: Leave Request for {{employeeEmail}}",
+  "HtmlPart": "<html><body><h1>Leave Approval Request</h1><p>Employee <strong>{{employeeEmail}}</strong> has requested leave.</p><p>Please review and click an option below:</p><div style='margin-top: 20px;'><a href='{{approveLink}}' style='background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-right: 10px;'>APPROVE</a><a href='{{rejectLink}}' style='background-color: #f44336; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>REJECT</a></div><p style='margin-top: 20px; font-size: 12px; color: #666;'>Reason: {{reason}}</p></body></html>",
+  "TextPart": "Leave Request for {{employeeEmail}}. \n\nApprove: {{approveLink}} \n\nReject: {{rejectLink}}"
+}
+}

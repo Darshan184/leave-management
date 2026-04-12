@@ -1,0 +1,81 @@
+{
+    "QueryLanguage": "JSONata",
+    "StartAt": "SendApprovalEmail",
+    "States": {
+        "SendApprovalEmail": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+            "Arguments": {
+                "FunctionName": "${SendApprovalArn}",
+                "Payload": {
+                    "taskToken": "{% $states.context.Task.Token %}",
+                    "leaveRequest": "{% $states.input %}"
+                }
+            },
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException"
+                    ],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 2
+                }
+            ],
+            "TimeoutSeconds": 259200,
+            "Next": "DecisionChoice"
+        },
+        "DecisionChoice": {
+            "Type": "Choice",
+            "Choices": [
+                {
+                    "Condition": "{% $states.input.status = 'APPROVED' %}",
+                    "Next": "NotifyApproved"
+                },
+                {
+                    "Condition": "{% $states.input.status = 'REJECTED' %}",
+                    "Next": "NotifyRejected"
+                }
+            ],
+            "Default": "NotifyTimeout"
+        },
+        "NotifyApproved": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Arguments": {
+                "FunctionName": "${NotifyUserArn}",
+                "Payload": {
+                    "status": "APPROVED",
+                    "data": "{% $states.context.Execution.Input %}"
+                }
+            },
+            "End": true
+        },
+        "NotifyRejected": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Arguments": {
+                "FunctionName": "${NotifyUserArn}",
+                "Payload": {
+                    "status": "REJECTED",
+                    "data": "{% $states.context.Execution.Input %}"
+                }
+            },
+            "End": true
+        },
+        "NotifyTimeout": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Arguments": {
+                "FunctionName": "${NotifyUserArn}",
+                "Payload": {
+                    "status": "TIMED_OUT",
+                    "data": "{% $states.context.Execution.Input %}"
+                }
+            },
+            "End": true
+        }
+    }
+}
