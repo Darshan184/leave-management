@@ -1,4 +1,4 @@
-/*package leaveHandlers;
+package leaveHandlers;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
@@ -105,6 +105,3 @@ public class ApplyLeaveHandlerTest {
         return request;
     }
 }
-
-
- */
