@@ -21,7 +21,7 @@ public class AuthHandler implements RequestHandler<APIGatewayCustomAuthorizerEve
         String effect = "Deny";
         String principalId = "unauthorized";
         Map<String, Object> authContext = new HashMap<>();
-
+    //JWT verification
         try {
             if (rawToken != null && rawToken.startsWith("Bearer ")) {
                 String token = rawToken.substring(7);
@@ -41,7 +41,7 @@ public class AuthHandler implements RequestHandler<APIGatewayCustomAuthorizerEve
         } catch (Exception e) {
             context.getLogger().log("JWT Error: " + e.getMessage());
         }
-
+    //Building the IAM Policy Response
         IamPolicyResponse.Statement statement = IamPolicyResponse.Statement.builder()
                 .withAction("execute-api:Invoke")
                 .withEffect(effect)

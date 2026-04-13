@@ -19,8 +19,8 @@ confirm_changeset = true
 resolve_s3 = true
 parameter_overrides = "JwtSecret=\"p8Z#mL2$vQ9!nK5*bX1&rJ6^tY3@wC7(\""
 s3_prefix = "leave-management"
-region = "us-east-1"
 image_repositories = []
+disable_rollback = true
 [default.package.parameters]
 resolve_s3 = true
 

@@ -1,0 +1,130 @@
+openapi: 3.0.0
+info:
+  title: Leave Management API
+  version: 1.0.0
+  description: |-
+    Leave management system where a user can request leave.
+    The request reaches the approver by email using SES.
+    Approver can either approve or reject the leave request.
+    Response is sent back to the user.
+servers:
+  - url:
+    description:
+
+security:
+  - bearerAuth: []
+
+paths:
+  /signup:
+    post:
+      summary: Register a new user
+      description: Creates a new user account with email, password, name and approver email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name, approverEmail]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                name:
+                  type: string
+                approverEmail:
+                  type: string
+                  format: email
+      responses:
+        '201':
+          description: User created successfully
+        '400':
+          description: Bad request
+
+  /login:
+    post:
+      summary: User login
+      description: Authenticates a user and returns a JWT token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        '401':
+          description: Unauthorized
+
+  /leave:
+    post:
+      summary: Apply for leave
+      description: Submits a leave request. Requires a valid JWT token in the Authorization header.
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: JWT token
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, fromDate, toDate, reason]
+              properties:
+                email:
+                  type: string
+                  format: email
+                fromDate:
+                  type: string
+                  format: date
+                toDate:
+                  type: string
+                  format: date
+                reason:
+                  type: string
+                  minLength: 3
+      responses:
+        '200':
+          description: Leave request submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  leaveId:
+                    type: string
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

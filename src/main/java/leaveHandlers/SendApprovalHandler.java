@@ -14,16 +14,24 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class SendApprovalHandler implements RequestHandler<Map<String, Object>, String> {
-    private final SesV2Client ses = SesV2Client.create();
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final SesV2Client ses;
+    private final ObjectMapper mapper;
 
+    public SendApprovalHandler() {
+        this(SesV2Client.create(), new ObjectMapper());
+    }
+
+    public SendApprovalHandler(SesV2Client sesClient, ObjectMapper objectMapper) {
+        this.ses = sesClient;
+        this.mapper = objectMapper;
+    }
     public String handleRequest(Map<String, Object> event, Context context) {
         try {
             //Extract data from the event (Task Token and Leave Request Map)
             String taskToken = (String) event.get("taskToken");
             Map<String, Object> leaveData = (Map<String, Object>) event.get("leaveRequest");
             System.out.println(leaveData);
-            // Construct the Decision API URL dynamically (Breaking the Circular Dependency)
+            // Construct the Base API dynamically
             String apiId = System.getenv("API_ID");
             String region = System.getenv("AWS_REGION");
             String stage = "Prod";

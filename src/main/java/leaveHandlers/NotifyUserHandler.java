@@ -12,23 +12,29 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class NotifyUserHandler implements RequestHandler<Map<String, Object>, String> {
-    private final SesV2Client ses = SesV2Client.create();
-    private final ObjectMapper mapper = new ObjectMapper(); // FIXED: Added mapper
-
+    private final SesV2Client ses;
+    private final ObjectMapper mapper;
+    public NotifyUserHandler() {
+        this(SesV2Client.create(), new ObjectMapper());
+    }
+    public NotifyUserHandler(SesV2Client sesClient, ObjectMapper objectMapper) {
+        this.ses = sesClient;
+        this.mapper = objectMapper;
+    }
     @Override
     public String handleRequest(Map<String, Object> input, Context context) {
         try {
-            // Extract status (APPROVED, REJECTED, or TIMED_OUT)
+            // Extract status
             String status = (String) input.get("status");
             Map<String, Object> userData = (Map<String, Object>) input.get("data");
             String userEmail = (String) userData.get("email");
 
-            // Prepare data for the EMPLOYEE notification template
+            // Prepare data for  notification template
             Map<String, String> templateData = new HashMap<>();
             templateData.put("status", status); // Will show as "APPROVED", "REJECTED", etc.
             templateData.put("reason", (String) userData.get("reason"));
 
-            // Build the Template object using the NEW template
+            // Build the Template object
             Template template = Template.builder()
                     .templateName("LeaveStatusNotification-Darshan")
                     .templateData(mapper.writeValueAsString(templateData))

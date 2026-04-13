@@ -49,7 +49,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: .
-      Handler: controller.SignupHandler::handleRequest
+      Handler: leaveHandlers.SignupHandler::handleRequest
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref LeaveManagementTable
@@ -67,7 +67,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: .
-      Handler: controller.LoginHandler::handleRequest
+      Handler: leaveHandlers.LoginHandler::handleRequest
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref LeaveManagementTable
@@ -89,14 +89,14 @@ Resources:
       Handler: leaveHandlers.ApplyLeaveHandler::handleRequest
       Environment:
         Variables:
-          STATE_MACHINE_ARN: !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:LeaveApprovalDarshan"
+          STATE_MACHINE_ARN: !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:LeaveApprovalDarshan1"
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref LeaveManagementTable
         - Statement:
             - Effect: Allow
               Action: "states:StartExecution"
-              Resource: !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:LeaveApprovalDarshan"
+              Resource: !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:LeaveApprovalDarshan1"
       Events:
         ApplyApi:
           Type: Api
@@ -122,7 +122,7 @@ Resources:
   LeaveApprovalStateMachine:
     Type: AWS::Serverless::StateMachine
     Properties:
-      Name: LeaveApprovalDarshan
+      Name: LeaveApprovalDarshan1
       DefinitionUri: statemachine.asl.json
       DefinitionSubstitutions:
         SendApprovalArn: !GetAtt SendApprovalHandlerFunction.Arn
@@ -165,7 +165,7 @@ Resources:
         - Statement:
             - Effect: Allow
               Action: "states:SendTaskSuccess"
-              Resource: !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:LeaveApprovalDarshan"
+              Resource: !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:LeaveApprovalDarshan1"
       Events:
         ApproveApi:
           Type: Api
